@@ -16,8 +16,8 @@ struct Car {
 // Customer structure
 struct Customer {
     int id;
-    string name;
     int age;
+    string name;
     string address;
     vector<int> rentedCarIds; // Track rental history
 };
@@ -56,6 +56,28 @@ public:
         }
     }
 
+    void createCustomer(int id, int age, string name, string address){
+            for(auto& customer: customers){
+                if(customer.id == id){
+                    cout<< "the customer already exists";
+                    return;
+                }
+            }
+            Customer newCustomer;
+            newCustomer.id = id;
+            newCustomer.age = age;
+            newCustomer.name = name;
+            newCustomer.address = address;
+            customers.push_back(newCustomer);
+        }
+        void displayCustomers(){
+            for(auto& customer: customers){
+                cout<<"customer id: "<<customer.id;
+                cout<<"customer age: "<<customer.age;
+                cout<<"customer name: "<<customer.name;
+                cout<<"customer address: "<<customer.address;
+            }
+        }
     void rentCar(int customerId, int carId, string rentalDate) {
         for (auto& car : cars) {
             if (car.id == carId && car.isAvailable) {
@@ -127,9 +149,11 @@ int main() {
         cout << "\n========== Car Rental System ==========\n";
         cout << "1. Add a Car\n";
         cout << "2. Show Available Cars\n";
-        cout << "3. Rent a Car\n";
-        cout << "4. Return a Car\n";
-        cout << "5. View Rental History\n";
+        cout << "3. Create a new customer\n";
+        cout << "4. view all customers\n";
+        cout << "5. Rent a Car\n";
+        cout << "6. Return a Car\n";
+        cout << "7. View Rental History\n";
         cout << "0. Exit\n";
         cout << "Choose an option: ";
         cin >> choice;
@@ -150,7 +174,22 @@ int main() {
         else if (choice == 2) {
             system.showAvailableCars();
         }
-        else if (choice == 3) {
+        else if (choice == 3){
+            int id, age;
+            string name,address;
+            cout<< "Enter customer Id: ";
+            cin>>id;
+            cout<< "Enter customer age: ";
+            cin>>age;
+            cout<< "Enter customer name: ";
+            cin>>name;
+            cout<< "Enter customer address: ";
+            cin>>address;
+        }
+        else if(choice == 4){
+            system.displayCustomers();
+        }
+        else if (choice == 5) {
             int custId, carId;
             string date;
             cout << "Enter Customer ID: ";
@@ -161,7 +200,7 @@ int main() {
             cin >> date;
             system.rentCar(custId, carId, date);
         }
-        else if (choice == 4) {
+        else if (choice == 6) {
             int carId;
             string returnDate;
             cout << "Enter Car ID to return: ";
@@ -170,7 +209,7 @@ int main() {
             cin >> returnDate;
             system.returnCar(carId, returnDate);
         }
-        else if (choice == 5) {
+        else if (choice == 7) {
             system.viewRentalHistory();
         }
         else if (choice == 0) {
