@@ -38,6 +38,12 @@ private:
 
 public:
     void addCar(int id, string brand,string model, int price) {
+        for(auto& car : cars) {
+            if (car.id == id) {
+                cout << "❌ Car ID already exists.\n";
+                return;
+            }
+        }
         cars.push_back({id, brand,model,price,true});
         cout << "✅ Car added successfully!\n";
     }
@@ -46,7 +52,7 @@ public:
         cout << "\n Available Cars:\n";
         for (const auto& car : cars) {
             if (car.isAvailable)
-                cout << "ID: " << car.id << ", " << car.brand << " " << car.model <<" "<<car.price <<"\n";
+                cout << "ID: " << car.id << " Brand: " << car.brand << " Model:" << car.model <<" Price:"<<car.price <<"\n";
         }
     }
 
