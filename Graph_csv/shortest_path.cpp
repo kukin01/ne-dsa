@@ -7,6 +7,8 @@
 #include<map>
 #include<list>
 #include<sstream>
+#include<set>
+#include<functional>
 using namespace std;
 
 struct Hospital {
@@ -212,7 +214,234 @@ public:
         cout << "Successfully loaded graph from " << filename << endl;
     }
 
-    // Load functions could be added similarly.
+    // Dijkstra's algorithm for shortest path
+    pair<int, vector<string>> findShortestPath(const string& start, const string& end) {
+        if (hospitals.find(start) == hospitals.end() || hospitals.find(end) == hospitals.end()) {
+            cout << "Error: One or both hospitals do not exist!" << endl;
+            return {-1, {}};
+        }
+
+        map<string, int> dist;
+        map<string, string> prev;
+        set<pair<int, string>> pq;
+
+        // Initialize distances
+        for (const auto& [id, _] : hospitals) {
+            dist[id] = INT_MAX;
+        }
+        dist[start] = 0;
+        pq.insert({0, start});
+
+        while (!pq.empty()) {
+            string u = pq.begin()->second;
+            pq.erase(pq.begin());
+
+            if (u == end) break;
+
+            for (const auto& [v, weight] : graph[u]) {
+                if (dist[u] != INT_MAX && dist[u] + weight < dist[v]) {
+                    pq.erase({dist[v], v});
+                    dist[v] = dist[u] + weight;
+                    prev[v] = u;
+                    pq.insert({dist[v], v});
+                }
+            }
+        }
+
+        if (dist[end] == INT_MAX) {
+            cout << "No path exists between " << start << " and " << end << endl;
+            return {-1, {}};
+        }
+
+        // Reconstruct path
+        vector<string> path;
+        for (string at = end; at != ""; at = prev[at]) {
+            path.push_back(at);
+        }
+        reverse(path.begin(), path.end());
+
+        return {dist[end], path};
+    }
+
+    // Cycle detection using DFS
+    bool hasCycle() {
+        map<string, bool> visited;
+        map<string, bool> recStack;
+
+        function<bool(const string&)> dfs = [&](const string& v) {
+            visited[v] = true;
+            recStack[v] = true;
+
+            for (const auto& [u, _] : graph[v]) {
+                if (!visited[u] && dfs(u)) return true;
+                else if (recStack[u]) return true;
+            }
+
+            recStack[v] = false;
+            return false;
+        };
+
+        for (const auto& [id, _] : hospitals) {
+            if (!visited[id] && dfs(id)) return true;
+        }
+        return false;
+    }
+
+    // Floyd-Warshall algorithm for all-pairs shortest path
+    map<string, map<string, int>> findAllPairsShortestPath() {
+        map<string, map<string, int>> dist;
+        
+        // Initialize distances
+        for (const auto& [i, _] : hospitals) {
+            for (const auto& [j, _] : hospitals) {
+                dist[i][j] = (i == j) ? 0 : INT_MAX;
+            }
+        }
+
+        // Set direct edge weights
+        for (const auto& [u, edges] : graph) {
+            for (const auto& [v, w] : edges) {
+                dist[u][v] = w;
+            }
+        }
+
+        // Floyd-Warshall algorithm
+        for (const auto& [k, _] : hospitals) {
+            for (const auto& [i, _] : hospitals) {
+                for (const auto& [j, _] : hospitals) {
+                    if (dist[i][k] != INT_MAX && dist[k][j] != INT_MAX &&
+                        dist[i][k] + dist[k][j] < dist[i][j]) {
+                        dist[i][j] = dist[i][k] + dist[k][j];
+                    }
+                }
+            }
+        }
+
+        return dist;
+    }
+
+    // Kruskal's algorithm for Minimum Spanning Tree
+    vector<pair<string, string>> findMinimumSpanningTree() {
+        vector<pair<int, pair<string, string>>> edges;
+        map<string, string> parent;
+        vector<pair<string, string>> mst;
+
+        // Initialize disjoint set
+        for (const auto& [id, _] : hospitals) {
+            parent[id] = id;
+        }
+
+        // Collect all edges
+        for (const auto& [u, edges_list] : graph) {
+            for (const auto& [v, w] : edges_list) {
+                if (u < v) { // Avoid duplicates in undirected graph
+                    edges.push_back({w, {u, v}});
+                }
+            }
+        }
+
+        // Sort edges by weight
+        sort(edges.begin(), edges.end());
+
+        // Find function for disjoint set
+        function<string(string)> find = [&](string x) {
+            if (parent[x] != x) {
+                parent[x] = find(parent[x]);
+            }
+            return parent[x];
+        };
+
+        // Union function for disjoint set
+        auto Union = [&](string x, string y) {
+            parent[find(x)] = find(y);
+        };
+
+        // Kruskal's algorithm
+        for (const auto& [w, edge] : edges) {
+            string u = edge.first;
+            string v = edge.second;
+            if (find(u) != find(v)) {
+                mst.push_back({u, v});
+                Union(u, v);
+            }
+        }
+
+        return mst;
+    }
+
+    // Emergency routing to find nearest hospital with minimum capacity
+    pair<string, int> findNearestHospitalWithCapacity(const string& start, int minBeds) {
+        if (hospitals.find(start) == hospitals.end()) {
+            cout << "Error: Starting hospital does not exist!" << endl;
+            return {"", -1};
+        }
+
+        map<string, int> dist;
+        set<pair<int, string>> pq;
+        string nearest = "";
+        int minDist = INT_MAX;
+
+        // Initialize distances
+        for (const auto& [id, _] : hospitals) {
+            dist[id] = INT_MAX;
+        }
+        dist[start] = 0;
+        pq.insert({0, start});
+
+        while (!pq.empty()) {
+            string u = pq.begin()->second;
+            int d = pq.begin()->first;
+            pq.erase(pq.begin());
+
+            // Check if current hospital meets capacity requirement
+            if (hospitals[u].beds >= minBeds && d < minDist) {
+                nearest = u;
+                minDist = d;
+            }
+
+            for (const auto& [v, weight] : graph[u]) {
+                if (dist[u] != INT_MAX && dist[u] + weight < dist[v]) {
+                    pq.erase({dist[v], v});
+                    dist[v] = dist[u] + weight;
+                    pq.insert({dist[v], v});
+                }
+            }
+        }
+
+        if (nearest == "") {
+            cout << "No hospital found with minimum " << minBeds << " beds!" << endl;
+            return {"", -1};
+        }
+
+        return {nearest, minDist};
+    }
+
+    // Print all-pairs shortest paths
+    void printAllPairsShortestPath() {
+        auto dist = findAllPairsShortestPath();
+        cout << "\nAll Pairs Shortest Paths:\n";
+        for (const auto& [i, _] : hospitals) {
+            for (const auto& [j, _] : hospitals) {
+                if (i != j) {
+                    cout << i << " to " << j << ": ";
+                    if (dist[i][j] == INT_MAX) {
+                        cout << "No path exists\n";
+                    } else {
+                        cout << dist[i][j] << " km\n";
+                    }
+                }
+            }
+        }
+    }
+
+    // Print minimum spanning tree
+    void printMinimumSpanningTree() {
+        auto mst = findMinimumSpanningTree();
+        cout << "\nMinimum Spanning Tree Edges:\n";
+        for (const auto& [u, v] : mst) {
+            cout << u << " -- " << v << endl;
+        }
+    }
 };
 int main() {
     HospitalNetwork net;
@@ -222,7 +451,9 @@ int main() {
         cout << "\n--- Hospital Network System ---\n";
         cout << "1. Add Hospital\n2. Connect Hospitals\n3. View Hospitals\n4. View Connections\n";
         cout << "5. Update Hospital Information\n6. Update Distance\n7. Delete Hospital\n8. Disconnect Hospitals\n";
-        cout << "9. Save to CSV\n10. Load Hospitals from CSV\n11. Load Graph from CSV\n0. Exit\nChoose: ";
+        cout << "9. Save to CSV\n10. Load Hospitals from CSV\n11. Load Graph from CSV\n";
+        cout << "12. Find Shortest Path\n13. Check for Cycles\n14. View All Pairs Shortest Paths\n";
+        cout << "15. View Minimum Spanning Tree\n16. Emergency Routing\n0. Exit\nChoose: ";
         cin >> choice;
 
         if (choice == 1) {
@@ -303,11 +534,49 @@ int main() {
             cin >> filename;
             net.loadGraphFromCSV(filename);
         }
+        else if (choice == 12) {
+            string start, end;
+            cout << "Start Hospital ID: "; cin >> start;
+            cout << "End Hospital ID: "; cin >> end;
+            auto [dist, path] = net.findShortestPath(start, end);
+            if (dist != -1) {
+                cout << "Shortest distance: " << dist << " km\n";
+                cout << "Path: ";
+                for (size_t i = 0; i < path.size(); ++i) {
+                    cout << path[i];
+                    if (i < path.size() - 1) cout << " -> ";
+                }
+                cout << endl;
+            }
+        }
+        else if (choice == 13) {
+            if (net.hasCycle()) {
+                cout << "The network contains cycles.\n";
+            } else {
+                cout << "The network is acyclic.\n";
+            }
+        }
+        else if (choice == 14) {
+            net.printAllPairsShortestPath();
+        }
+        else if (choice == 15) {
+            net.printMinimumSpanningTree();
+        }
+        else if (choice == 16) {
+            string start;
+            int minBeds;
+            cout << "Start Hospital ID: "; cin >> start;
+            cout << "Minimum required beds: "; cin >> minBeds;
+            auto [nearest, dist] = net.findNearestHospitalWithCapacity(start, minBeds);
+            if (nearest != "") {
+                cout << "Nearest hospital with " << minBeds << "+ beds: " << nearest << endl;
+                cout << "Distance: " << dist << " km\n";
+            }
+        }
 
     } while (choice != 0);
 
     return 0;
 }
-
 
 
